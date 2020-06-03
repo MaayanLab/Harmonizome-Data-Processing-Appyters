@@ -6,6 +6,7 @@ import scipy.spatial.distance as dist
 from statsmodels.distributions.empirical_distribution import ECDF
 from scipy import stats
 import zipfile
+from IPython.core.display import clear_output
 
 
 def merge(inputDF, axis, method):
@@ -39,8 +40,12 @@ def zscore(inputDF, axis):
 
         #Modefied Z Score
         for i,index in enumerate(inputDF.index):
-
             progressPercent = ((i+1)/len(inputDF.index))*100
+
+            try:
+                clear_output()
+            except Exception:
+                pass
 
             sys.stdout.write("Progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(inputDF.index)))
             sys.stdout.flush()
@@ -62,6 +67,11 @@ def zscore(inputDF, axis):
         for i,col in enumerate(inputDF.columns):
 
             progressPercent = ((i+1)/len(inputDF.columns))*100
+
+            try:
+                clear_output()
+            except Exception:
+                pass
 
             sys.stdout.write("Progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(inputDF.columns)))
             sys.stdout.flush()
@@ -92,6 +102,11 @@ def quantileNormalize(inputDF):
 
         progressPercent = ((i+1)/len(df.columns))*100
 
+        try:
+            clear_output()
+        except Exception:
+            pass
+
         sys.stdout.write("Step 1/2 progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(df.columns)))
         sys.stdout.flush()
 
@@ -103,6 +118,11 @@ def quantileNormalize(inputDF):
     for i,col in enumerate(df):
 
         progressPercent = ((i+1)/len(df.columns))*100
+
+        try:
+            clear_output()
+        except Exception:
+            pass
 
         sys.stdout.write("Step 2/2 progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(df.columns)))
         sys.stdout.flush()
@@ -125,6 +145,11 @@ def mapgenesymbols(inputDF):
     for i, index in enumerate(inputDF.index):
 
         progressPercent = ((i+1)/len(inputDF.index))*100
+
+        try:
+            clear_output()
+        except Exception:
+            pass
 
         sys.stdout.write("Progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(inputDF.index)))
         sys.stdout.flush()
@@ -254,6 +279,11 @@ def createUpGeneSetLib(inputDF, path, name, details=None):
 
         progressPercent = ((i+1)/len(inputDF.columns))*100
 
+        try:
+            clear_output()
+        except Exception:
+            pass
+
         sys.stdout.write("Progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(inputDF.columns)))
         sys.stdout.flush()
 
@@ -284,6 +314,11 @@ def createDownGeneSetLib(inputDF, path, name, details=None):
     for i,col in enumerate(inputDF.columns):
 
         progressPercent = ((i+1)/len(inputDF.columns))*100
+
+        try:
+            clear_output()
+        except Exception:
+            pass
 
         sys.stdout.write("Progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(inputDF.columns)))
         sys.stdout.flush()
@@ -319,6 +354,11 @@ def createUpAttributeSetLib(inputDF, path, name):
 
         progressPercent = ((i+1)/len(inputDF.columns))*100
 
+        try:
+            clear_output()
+        except Exception:
+            pass
+
         sys.stdout.write("Progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(inputDF.columns)))
         sys.stdout.flush()
 
@@ -349,6 +389,11 @@ def createDownAttributeSetLib(inputDF, path, name):
     for i,col in enumerate(inputDF.columns):
 
         progressPercent = ((i+1)/len(inputDF.columns))*100
+
+        try:
+            clear_output()
+        except Exception:
+            pass
 
         sys.stdout.write("Progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(inputDF.columns)))
         sys.stdout.flush()
@@ -388,6 +433,11 @@ def createGeneList(inputDf):
 
         progressPercent = ((i+1)/len(gene_list.index))*100
 
+        try:
+            clear_output()
+        except Exception:
+            pass
+
         sys.stdout.write("Progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(gene_list.index)))
         sys.stdout.flush()
 
@@ -415,6 +465,11 @@ def createAttributeList(inputDF, metaData=pd.DataFrame()):
         for i,attribute in enumerate(attribute_list.index):
 
             progressPercent = ((i+1)/len(attribute_list.index))*100
+
+            try:
+                clear_output()
+            except Exception:
+                pass
 
             sys.stdout.write("Progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(attribute_list.index)))
             sys.stdout.flush()
@@ -459,6 +514,11 @@ def createGeneAttributeEdgeList(inputDF, attributelist, genelist, path, name):
 
         progressPercent = ((i+1)/len(inputDF.columns))*100
 
+        try:
+            clear_output()
+        except Exception:
+            pass
+
         sys.stdout.write("Progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(inputDF.columns)))
         sys.stdout.flush()
 
@@ -497,6 +557,11 @@ def createBinaryMatrix(inputDF, ppi=False):
 
             progressPercent = ((i+1)/len(genes))*100
 
+            try:
+                clear_output()
+            except Exception:
+                pass
+
             sys.stdout.write("Progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(genes)))
             sys.stdout.flush()
 
@@ -506,7 +571,7 @@ def createBinaryMatrix(inputDF, ppi=False):
             lst.discard(gene)
             lst = list(lst)
 
-            matrloc.loc[gene, lst] = 1
+            matrix.loc[gene, lst] = 1
 
         return(matrix)
 
@@ -520,6 +585,11 @@ def createBinaryMatrix(inputDF, ppi=False):
         for i, gene in enumerate(genes):
 
             progressPercent = ((i+1)/len(genes))*100
+
+            try:
+                clear_output()
+            except Exception:
+                pass
 
             sys.stdout.write("Progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(genes)))
             sys.stdout.flush()
@@ -544,6 +614,11 @@ def createStandardizedMatrix(inputDF):
     for i,index in enumerate(inputDF.index):
 
         progressPercent = ((i+1)/len(inputDF.index))*100
+
+        try:
+            clear_output()
+        except Exception:
+            pass
 
         sys.stdout.write("Progress: %d%%  %d Out of %d   \r" % (progressPercent, (i+1), len(inputDF.index)))
         sys.stdout.flush()
