@@ -39,3 +39,7 @@ Thumbs.db
 *.vscode
 *.ipynb_checkpoints
 __pycache__
+
+# Custom - data and files
+data/
+files/
