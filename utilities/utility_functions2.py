@@ -26,6 +26,7 @@ def zscore(inputDF, axis, epsilon=0):
         axis - the axis on which to calculate the z-scores. Either 'row' or 'column'
         epsilon - small adjustment in the case of divide by 0 errors.
     '''
+    np.seterr(divide='ignore', invalid='ignore')
     if axis == 'row':
         a = inputDF.to_numpy()
         median_y = np.median(a, axis=1)[:, np.newaxis]
@@ -270,11 +271,11 @@ def createUpAttributeSetLib(inputDF, path, name):
 
     inputDF = inputDF.T
 
-    filenameGMT = name + \
-        '_%s.gmt' % str(datetime.date.today())[0:7].replace('-', '_')
+    # filenameGMT = name + \
+    #     '_%s.gmt' % str(datetime.date.today())[0:7].replace('-', '_')
 
-    if os.path.isfile(path+filenameGMT):
-        os.remove(path+filenameGMT)
+    # if os.path.isfile(path+filenameGMT):
+    #     os.remove(path+filenameGMT)
 
     for i, col in enumerate(tqdm(inputDF.columns)):
 
@@ -288,8 +289,9 @@ def createUpAttributeSetLib(inputDF, path, name):
         lst = ['{0}\t'.format(elem) for elem in lst]
         lst.insert(len(lst), '\n')  # add a newline char at the end of each lst
 
-        with open(path+filenameGMT, 'a') as the_file:
-            the_file.writelines(lst)
+        # with open(path+filenameGMT, 'a') as the_file:
+        #     the_file.writelines(lst)
+        print(lst)
 
     inputDF = inputDF.T
 
@@ -340,21 +342,21 @@ def createGeneList(inputDF):
     Creates a list of genes and the corresponding Entrez Gene IDs (supplied by 
     the NCBI)
 
-    Requires: inputDF has been passed through mapgenesymbols, and does not 
-    contain any genes that are not mapped to a gene ID
+    Note: this differs from the previous function in its behavior with dealing
+    with genes that do not have an ID. The types of NaN is different.
     '''
     gene_list = inputDF.index
     d = dict(zip(getGeneIDs.index, getGeneIDs.iloc[:, 0]))
 
-    gene_ids = np.array([d.get(x, -1) for x in tqdm(gene_list)], dtype=np.int_)
+    gene_ids = np.array([d.get(x, np.nan) for x in tqdm(gene_list)])
     df = pd.DataFrame(list(zip(gene_list, gene_ids)),
                       columns=['GeneSym', 'GeneID'])
     return df
 
 
-def createAttributeList(inputDF, metaData=pd.DataFrame()):
+def createAttributeList(inputDF, metaData=None):
 
-    if not metaData.empty:
+    if not metaData:
 
         cols = metaData.columns.tolist()
 

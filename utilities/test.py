@@ -32,6 +32,7 @@ print(lg2)
 
 assert(df.equals(df2))
 '''
+'''
 df = pd.DataFrame({'gene': range(4), 'id': np.random.randint(100, size=4),
                    'col3': np.random.randint(100, size=4), 'col4': np.random.randint(100, size=4)})
 df.set_index('gene', inplace=True)
@@ -45,3 +46,8 @@ sm2 = uf2.createStandardizedMatrix(df)
 # print(sm2)
 
 assert(sm.equals(sm2))
+'''
+
+df = pd.DataFrame({'gene': range(4), 'id': np.random.randint(100, size=4),
+                   'col3': np.random.randint(100, size=4), 'col4': np.random.randint(100, size=4)})
+uf2.createUpAttributeSetLib(df, '', '')
