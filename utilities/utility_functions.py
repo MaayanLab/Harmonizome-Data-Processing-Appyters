@@ -225,7 +225,7 @@ def createUpGeneSetLib(inputDF, path, name, details=None):
     if os.path.isfile(path+filenameGMT):
         os.remove(path+filenameGMT)
 
-    for i, col in enumerate(tqdm(inputDF.columns)):
+    for i, col in enumerate(inputDF.columns):
 
         index = inputDF[inputDF[col] == 1].index
 
@@ -414,7 +414,7 @@ def createGeneAttributeEdgeList(inputDF, attributelist, genelist, path, name):
 
     # df = pd.DataFrame(columns=['Attribute', 'Gene', 'GeneID', 'Weight'])
 
-    for i, col in enumerate(tqdm(inputDF.columns)):
+    for i, col in enumerate(inputDF.columns):
 
         temp['GeneSym'] = inputDF[col].index
         temp['GeneID'] = genelist['GeneID']
@@ -426,8 +426,8 @@ def createGeneAttributeEdgeList(inputDF, attributelist, genelist, path, name):
         with open(path+filenameGMT, 'a') as the_file:
             temp.to_csv(the_file, header=False, index=False, sep='\t')
 
-        count += temp[temp['Weight'] >= 0.95].shape[0]
-        count += temp[temp['Weight'] <= -0.95].shape[0]
+        #count += temp[temp['Weight'] >= 0.95].shape[0]
+        #count += temp[temp['Weight'] <= -0.95].shape[0]
 
         # for index in temp.index:
         #     lst = [temp.loc[index, 'Attribute'], temp.loc[index, 'Gene'], str(temp.loc[index, 'GeneID']), temp.loc[index, 'Weight']]
@@ -436,7 +436,7 @@ def createGeneAttributeEdgeList(inputDF, attributelist, genelist, path, name):
         #
         #     with open(path+filenameGMT, 'a') as the_file:
         #         the_file.writelines(lst)
-    print('\n\n The number of statisticaly relevent gene-attribute associations is: %d' % count)
+    #print('\n\n The number of statisticaly relevent gene-attribute associations is: %d' % count)
 
 
 def createBinaryMatrix(inputDF, ppi=False):

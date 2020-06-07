@@ -48,6 +48,34 @@ sm2 = uf2.createStandardizedMatrix(df)
 assert(sm.equals(sm2))
 '''
 
-df = pd.DataFrame({'gene': range(4), 'id': np.random.randint(100, size=4),
-                   'col3': np.random.randint(100, size=4), 'col4': np.random.randint(100, size=4)})
-uf2.createUpAttributeSetLib(df, '', '')
+df = pd.DataFrame({'gene': [i * 3 for i in range(4)], 'id': np.random.randint(2, size=4),
+                   'col3': np.random.randint(2, size=4), 'col4': np.random.randint(2, size=4)})
+df.set_index('gene', inplace=True)
+# uf2.createUpAttributeSetLib(df, '', '')
+
+print(df)
+
+# df.to#_
+
+for i, col in enumerate(df.columns):
+    print('-----------------')
+
+    index = df[df[col] == 1].index
+
+    print(col, df[col] == 1, index, sep='\n')
+    lst = index.values.tolist()
+
+    # if len(lst) > 5 and len(lst) <= 2000:
+
+    #     lst.insert(0, col)
+    #     if details:
+    #         lst.insert(1, details[i])
+    #     else:
+    #         lst.insert(1, 'NA')
+    #     # add tabs between terms in the lst
+    #     lst = ['{0}\t'.format(elem) for elem in lst]
+    #     # add a newline char at the end of each lst
+    #     lst.insert(len(lst), '\n')
+
+    #     with open(path+filenameGMT, 'a') as the_file:
+    #         the_file.writelines(lst)
