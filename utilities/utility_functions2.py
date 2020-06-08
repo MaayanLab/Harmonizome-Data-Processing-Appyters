@@ -1,4 +1,7 @@
+# Adapted from code created by Moshe Silverstein
+
 import datetime
+import os
 import numpy as np
 import pandas as pd
 import scipy.spatial.distance as dist
@@ -6,60 +9,44 @@ from statsmodels.distributions.empirical_distribution import ECDF
 from tqdm import tqdm
 
 
-mappingDF = pd.read_csv('mappingFile_2017.txt',
-                        sep='\t', header=None, index_col=0)
-
-getGeneIDs = pd.read_csv('GeneSymbolAndIDS_2017.txt', sep='\t', index_col=0)
-
-
 def removeAndImpute(inputDF):
-    df = inputDF.copy()
-    # mean = np.mean(df.values.flatten())
-    df.reset_index(inplace=True)
-    df.replace(0.0, np.nan, inplace=True)
-    df.dropna(thresh=int(0.05*df.shape[0]), axis=1, inplace=True)
-    df.dropna(thresh=int(0.05*df.shape[1]), axis=0, inplace=True)
-    genes = df.iloc[:, 0].values.tolist()
-    df.drop(df.columns[0], axis=1, inplace=True)
-    # df.replace(np.nan, mean, inplace=True)
-    df = df.T.fillna(df.mean(axis=1)).T
-    df.index = genes
-    return(df)
+    '''
+    Removes rows and columns that have more than 95% of their data missing,
+    i.e. set to 0. Replacing any missing data leftover after removal with
+    the means of the rows. Does all calculations in place.
+    '''
+    outputDF = inputDF.replace(0.0, np.nan)
+    outputDF = outputDF.dropna(thresh=0.05 * inputDF.shape[0], axis=1)
+    outputDF = outputDF.dropna(thresh=0.05 * inputDF.shape[1], axis=0)
+
+    outputDF = outputDF.T.fillna(
+        outputDF.mean(axis=1, numeric_only=True), axis=0).T
+    return outputDF
 
 
 def merge(inputDF, axis, method):
+    '''
+    Merges duplicate rows or columns, depending on the axis specified. The
+    final values of the merged rows or columns is determined by the method.
+    '''
     axis = axis.lower()
     if method == 'mean':
         if axis == 'column':
-            inputDF = inputDF.groupby(inputDF.columns, axis=1).mean()
+            outputDF = inputDF.groupby(inputDF.columns, axis=1).mean()
         elif axis == 'row':
-            inputDF = inputDF.groupby(level=0, axis=0).mean()
-        return(inputDF)
+            outputDF = inputDF.groupby(level=0, axis=0).mean()
+        return outputDF
 
 
 def quantileNormalize(inputDF):
-    df = inputDF.copy()
-
-    attributes = df.columns.values.tolist()
-
-    df.columns = np.arange(0, len(attributes))
-
-    # compute rank
-    dic = {}
-    for i, col in enumerate(tqdm(list(df))):
-
-        dic.update({col: sorted(df[col])})
-
-    sorted_df = pd.DataFrame(dic)
-    rank = sorted_df.mean(axis=1).tolist()
-    # sort
-    for i, col in enumerate(tqdm(list(df))):
-
-        t = np.searchsorted(np.sort(df[col]), df[col])
-        df[col] = [rank[i] for i in t]
-
-    df.columns = attributes
-    return df
+    '''
+    Performs quantile normalization on the input DataFrame.
+    '''
+    rank_mean = inputDF.stack().groupby(
+        inputDF.rank(method='first').stack().astype(int)).mean()
+    outputDF = inputDF.rank(method='min').stack().astype(int).map(
+        rank_mean).unstack()
+    return outputDF
 
 
 def zscore(inputDF, axis, epsilon=0):
@@ -85,7 +72,7 @@ def zscore(inputDF, axis, epsilon=0):
 
         outputDF = pd.DataFrame(data=modified_z_scores, index=inputDF.index,
                                 columns=inputDF.columns)
-        inputDF.update(outputDF)
+        return outputDF
 
     elif axis == 'column':
         # left unfactored. Is this used?
@@ -104,30 +91,33 @@ def log2(inputDF):
     a = np.log2(a + 1)
     outputDF = pd.DataFrame(data=a, index=inputDF.index,
                             columns=inputDF.columns)
-    return(outputDF)
+    return outputDF
 
 
-def mapgenesymbols(inputDF):
+def mapgenesymbols(inputDF, symbol_lookup):
     '''
     Replaces the index of the inputDF, which are gene names, with
-    corresponding approved gene symbols from a built-in mapping.
-    If any gene names are not in the mapping, they are discarded from the
-    DataFrame.
+    corresponding approved gene symbols according to the given symbol_lookup 
+    dictionary. If any gene names are not in the mapping, they are discarded 
+    from the DataFrame.
     '''
     tqdm.pandas()
-    inputDF.reset_index(inplace=True)
+    outputDF = inputDF.reset_index()
 
-    d = dict(zip(mappingDF.index, mappingDF.iloc[:, 0]))
-    inputDF.iloc[:, 0] = inputDF.iloc[:, 0].progress_map(
-        lambda x: d.get(x, np.nan))
+    outputDF.iloc[:, 0] = outputDF.iloc[:, 0].progress_map(
+        lambda x: symbol_lookup.get(x, np.nan))
 
-    inputDF.dropna(inplace=True, subset=[inputDF.columns[0]])
-    inputDF.set_index(inputDF.columns[0], inplace=True)
+    outputDF = outputDF.dropna(subset=[outputDF.columns[0]])
+    outputDF = outputDF.set_index(outputDF.columns[0])
+    return outputDF
 
 
 def createTertiaryMatrix(inputDF):
-    df = inputDF.copy()
-
+    '''
+    Returns the input matrix with all significant values, greater than 0.95
+    or less than -0.95, mapped to 1 or -1, respectively. All other values
+    are mapped to 0.
+    '''
     def mapter(x):
         if x >= 0.95:
             return 1
@@ -136,8 +126,8 @@ def createTertiaryMatrix(inputDF):
         else:
             return 0
 
-    df = df.applymap(mapter)
-    return(df)
+    df = inputDF.applymap(mapter)
+    return df
 
 
 def createSetLibHelper(lib, inputDF, path, name, direction, details=None):
@@ -153,12 +143,10 @@ def createSetLibHelper(lib, inputDF, path, name, direction, details=None):
     saved to is thus
         path + name + '_<year>_<month>.gmt'
     '''
+    filenameGMT = getFileName(path, name, 'gmt')
+
     if not (lib == 'gene' or lib == 'attribute'):
         return
-
-    filenameGMT = path + name + \
-        '_%s.gmt' % str(datetime.date.today())[0:7].replace('-', '_')
-
     if lib == 'attribute':
         inputDF = inputDF.T
 
@@ -236,7 +224,7 @@ def createSimilarityMatrix(inputDF, metric):
     return(similarity_df)
 
 
-def createGeneList(inputDF):
+def createGeneList(inputDF, geneid_lookup):
     '''
     Creates a list of genes and the corresponding Entrez Gene IDs(supplied by
     the NCBI)
@@ -246,9 +234,8 @@ def createGeneList(inputDF):
     to -1, whereas the previous script will set them to np.nan.
     '''
     gene_list = inputDF.index
-    d = dict(zip(getGeneIDs.index, getGeneIDs.iloc[:, 0]))
-
-    gene_ids = np.array([d.get(x, -1) if np.isfinite(d.get(x, -1))
+    gene_ids = np.array([geneid_lookup.get(x, -1)
+                         if np.isfinite(geneid_lookup.get(x, -1))
                          else -1 for x in tqdm(gene_list)], dtype=np.int_)
     df = pd.DataFrame(list(zip(gene_list, gene_ids)),
                       columns=['GeneSym', 'GeneID'])
@@ -266,7 +253,7 @@ def createAttributeList(inputDF, metaData=None):
     else:
         attribute_list = pd.DataFrame(index=inputDF.columns)
     attribute_list.index.name = 'Attributes'
-    return(attribute_list)
+    return attribute_list
 
 
 def createGeneAttributeEdgeList(inputDF, attributelist, genelist, path, name):
@@ -281,19 +268,20 @@ def createGeneAttributeEdgeList(inputDF, attributelist, genelist, path, name):
         attributelist and genelist were generated from running
         createAttributeList and createGeneList on inputDF, respectively.
     '''
-    filenameGMT = path + name + \
-        '_%s.tsv' % str(datetime.date.today())[0: 7].replace('-', '_')
-
     temp = pd.DataFrame(columns=['GeneSym', 'GeneID', 'Attribute', 'Weight'])
 
-    with open(filenameGMT, 'w') as f:
-        temp['GeneSym'] = [x for x in genelist['GeneSym'].values.tolist()
-                           for _ in range(len(attributelist))]
-        temp['GeneID'] = [x for x in genelist['GeneID'].values.tolist()
-                          for _ in range(len(attributelist))]
-        temp['Attribute'] = attributelist.index.values.tolist() * len(genelist)
-        temp['Weight'] = inputDF.values.flatten()
-        temp.to_csv(f, index=False, sep='\t')
+    temp['GeneSym'] = pd.Series(
+        [x for x in genelist['GeneSym'].values.tolist()
+            for _ in range(len(attributelist))], dtype='category')
+    temp['GeneID'] = pd.Series(
+        [x for x in genelist['GeneID'].values.tolist()
+            for _ in range(len(attributelist))], dtype='category')
+    temp['Attribute'] = pd.Series(
+        attributelist.index.values.tolist() * len(genelist),
+        dtype='category')
+    temp['Weight'] = pd.Series(inputDF.values.flatten(), dtype='category')
+
+    saveData(temp, path, name, ext='tsv', compression='gzip')
 
     arr = inputDF.to_numpy()
     count = np.sum(arr >= 0.95) + np.sum(arr <= -0.95)
@@ -328,11 +316,67 @@ def createStandardizedMatrix(inputDF):
     ourECDF = 2 * (ourECDF - mean)
     newDF = pd.DataFrame(data=ourECDF, index=inputDF.index,
                          columns=inputDF.columns)
-    return(newDF)
+    return newDF
 
 
-def saveData(inputDF, path, name, x=None, y=None, symmetric=False, compression=''):
-    pass
+def getFileName(path, name, ext):
+    '''
+    Returns the file name by taking the path and name, adding the year and month
+    and then the extension. The final string returned is thus
+        '<path>/<name>_<year>_<month>.ext'
+    '''
+    date = str(datetime.date.today())[0:7].replace('-', '_')
+    filename = ''.join([name, '_', date, '.', ext])
+    return os.path.join(path, filename)
+
+
+def saveData(inputDF, path, name, compression=None, ext='.tsv', axes=None,
+             symmetric=False, dtype=None, **kwargs):
+    '''
+    Save inputDF according to the compression method given. 
+    compression can take these values:
+        None or 'gmt' - defaults to pandas to_csv() function.
+        'gzip' - uses the gzip compression method of the pandas to_csv() function
+        'npz' - converts the DataFrame to a numpy array, and saves the array.
+                The array is stored as 'axes[0]_axes[1]'. If symmetric is true,
+                it is stored as 'axes[0]_axes[1]_symmetric' instead.
+    ext is only used if compression is None or 'gzip'. The extension of the file
+    will be .ext, or .ext.gz if 'gzip' is specified.
+    axes must only be specified if compression is 'npz'. It is a string tuple
+    that describes the index and columns inputDF, i.e. (x, y) where x, y = 
+    'gene' or 'attribute'.
+    symmetric is only used if compression is 'npz', and indicates if inputDF
+    is symmetric and can be stored as such. 
+    dtype is only used if compression is 'npz', and indicates a dtype that the
+    array can be cast to before storing.
+
+    The year and month are added at the end of the name. The path the file is 
+    saved to is thus
+        path + name + '_<year>_<month>.ext'
+    where ext is .ext, .ext.gz, or .npz depending on the compression method.
+    '''
+
+    if compression is None:
+        name = getFileName(path, name, ext)
+        inputDF.to_csv(name, sep='\t', **kwargs)
+    elif compression == 'gzip':
+        name = getFileName(path, name, ext + '.gz')
+        inputDF.to_csv(name, sep='\t', compression='gzip', **kwargs)
+    elif compression == 'npz':
+        name = getFileName(path, name, 'npz')
+        index, columns = axes
+        valid_axes = ['gene', 'attribute']
+        assert(index in valid_axes and columns in valid_axes)
+        array_name = index + '_' + columns
+
+        data = inputDF.to_numpy()
+        if dtype is not None:
+            data = data.astype(dtype=dtype)
+        if symmetric:
+            array_name += '_symmetric'
+            data = np.triu(data)
+        d = {array_name: data}
+        np.savez_compressed(name, **d)
 
 
 def createBinaryMatrix(inputDF, ppi=False):

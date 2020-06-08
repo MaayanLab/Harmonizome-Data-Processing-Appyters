@@ -43,3 +43,6 @@ __pycache__
 # Custom - data and files
 data/
 files/
+*/data/
+*/Input/
+*/Output/

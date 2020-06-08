@@ -80,14 +80,14 @@ def quantileNormalize(inputDF):
 
     # compute rank
     dic = {}
-    for i, col in enumerate(tqdm(list(df))):
+    for i, col in enumerate(list(df)):
 
         dic.update({col: sorted(df[col])})
 
     sorted_df = pd.DataFrame(dic)
     rank = sorted_df.mean(axis=1).tolist()
     # sort
-    for i, col in enumerate(tqdm(list(df))):
+    for i, col in enumerate(list(df)):
 
         t = np.searchsorted(np.sort(df[col]), df[col])
         df[col] = [rank[i] for i in t]
@@ -426,8 +426,8 @@ def createGeneAttributeEdgeList(inputDF, attributelist, genelist, path, name):
         with open(path+filenameGMT, 'a') as the_file:
             temp.to_csv(the_file, header=False, index=False, sep='\t')
 
-        #count += temp[temp['Weight'] >= 0.95].shape[0]
-        #count += temp[temp['Weight'] <= -0.95].shape[0]
+        count += temp[temp['Weight'] >= 0.95].shape[0]
+        count += temp[temp['Weight'] <= -0.95].shape[0]
 
         # for index in temp.index:
         #     lst = [temp.loc[index, 'Attribute'], temp.loc[index, 'Gene'], str(temp.loc[index, 'GeneID']), temp.loc[index, 'Weight']]
@@ -436,7 +436,7 @@ def createGeneAttributeEdgeList(inputDF, attributelist, genelist, path, name):
         #
         #     with open(path+filenameGMT, 'a') as the_file:
         #         the_file.writelines(lst)
-    #print('\n\n The number of statisticaly relevent gene-attribute associations is: %d' % count)
+    print('\n\n The number of statisticaly relevent gene-attribute associations is: %d' % count)
 
 
 def createBinaryMatrix(inputDF, ppi=False):
@@ -560,8 +560,7 @@ def removeAndImpute(inputDF):
     df = df.T.fillna(df.mean(axis=1)).T
 
     df.index = genes
-
-    return(df)
+    return df
 
 # def writeToZipFile(inputDF, path, name):
 #
