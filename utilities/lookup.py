@@ -46,9 +46,6 @@ def get_lookups():
         'ftp://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Mammalia/Mus_musculus.gene_info.gz',
         'ftp://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Mammalia/Homo_sapiens.gene_info.gz'
     ]
-    # sources = [
-    #     'ftp://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/All_Data.gene_info.gz'
-    # ]
 
     symbol_lookup = {}
     geneid_lookup = {}

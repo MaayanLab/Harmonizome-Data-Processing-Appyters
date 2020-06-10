@@ -2,10 +2,13 @@
 
 import datetime
 import os
+import zipfile
+
 import numpy as np
 import pandas as pd
 import scipy.spatial.distance as dist
 from statsmodels.distributions.empirical_distribution import ECDF
+
 from tqdm import tqdm
 
 
@@ -112,7 +115,7 @@ def mapgenesymbols(inputDF, symbol_lookup):
     return outputDF
 
 
-def createTertiaryMatrix(inputDF):
+def createTernaryMatrix(inputDF):
     '''
     Returns the input matrix with all significant values, greater than 0.95
     or less than -0.95, mapped to 1 or -1, respectively. All other values
@@ -330,7 +333,7 @@ def getFileName(path, name, ext):
     return os.path.join(path, filename)
 
 
-def saveData(inputDF, path, name, compression=None, ext='.tsv', axes=None,
+def saveData(inputDF, path, name, compression=None, ext='tsv',
              symmetric=False, dtype=None, **kwargs):
     '''
     Save inputDF according to the compression method given. 
@@ -364,19 +367,46 @@ def saveData(inputDF, path, name, compression=None, ext='.tsv', axes=None,
         inputDF.to_csv(name, sep='\t', compression='gzip', **kwargs)
     elif compression == 'npz':
         name = getFileName(path, name, 'npz')
-        index, columns = axes
-        valid_axes = ['gene', 'attribute']
-        assert(index in valid_axes and columns in valid_axes)
-        array_name = index + '_' + columns
 
         data = inputDF.to_numpy()
+        index = np.array(inputDF.index)
+        columns = np.array(inputDF.columns)
+
         if dtype is not None:
             data = data.astype(dtype=dtype)
         if symmetric:
-            array_name += '_symmetric'
             data = np.triu(data)
-        d = {array_name: data}
+            d = {'symmetric': data, 'index': index}
+        else:
+            d = {'nonsymmetric': data, 'index': index, 'columns': columns}
         np.savez_compressed(name, **d)
+
+
+def loadData(filename):
+    '''
+    Loads a pandas DataFrame stored in a .npz data numpy array format.
+    '''
+    with np.load(filename, allow_pickle=True) as data_load:
+        arrays = data_load.files
+        if arrays[0] == 'symmetric':
+            data = data_load['symmetric']
+            index = data_load['index']
+            data = data + data.T - np.diag(data.diagonal())
+            df = pd.DataFrame(data=data, index=index, columns=index)
+            return df
+        elif arrays[0] == 'nonsymmetric':
+            data = data_load['nonsymmetric']
+            index = data_load['index']
+            columns = data_load['columns']
+            df = pd.DataFrame(data=data, index=index, columns=columns)
+            return df
+
+
+def createArchive(path):
+    with zipfile.ZipFile('output.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, _, files in os.walk(path):
+            for f in files:
+                zipf.write(os.path.join(root, f))
 
 
 def createBinaryMatrix(inputDF, ppi=False):

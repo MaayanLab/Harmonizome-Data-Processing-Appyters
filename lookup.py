@@ -39,10 +39,10 @@ def get_lookups():
     symbols (synonyms), the second a mapping from approved symbols to Entrez
     Gene IDs.
 
-    Sources are currently human, mouse, and chicken, in priority order.
+    Sources are currently human, mouse, and rat, in order of descending priority.
     '''
     sources = [
-        'ftp://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Non-mammalian_vertebrates/Gallus_gallus.gene_info.gz',
+        'ftp://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Mammalia/Rattus_norvegicus.gene_info.gz',
         'ftp://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Mammalia/Mus_musculus.gene_info.gz',
         'ftp://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Mammalia/Homo_sapiens.gene_info.gz'
     ]
