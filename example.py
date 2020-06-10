@@ -61,7 +61,7 @@ if not os.path.exists(path):
 %%appyter code_exec
 
 matrix = pd.read_csv({{FileField(
-    constraint='.*\\.csv$',
+    constraint='.*\.csv$',
     name='expression_matrix', 
     label='Expression Matrix', 
     default='Input/ABA-DHB-MA-S/gene_array_matrix_csv/expression_matrix.csv',
@@ -77,7 +77,7 @@ matrix.shape
 %%appyter code_exec
 
 sample_meta = pd.read_csv({{FileField(
-    constraint='.*\\.csv$',
+    constraint='.*\.csv$',
     name='columns_metadata', 
     label='Sample Metadata', 
     default='Input/ABA-DHB-MA-S/gene_array_matrix_csv/columns_metadata.csv',
@@ -93,7 +93,7 @@ sample_meta.shape
 %%appyter code_exec
 
 gene_meta = pd.read_csv({{FileField(
-    constraint='.*\\.csv$',
+    constraint='.*\.csv$',
     name='rows_metadata', 
     label='Gene Metadata', 
     default='Input/ABA-DHB-MA-S/gene_array_matrix_csv/rows_metadata.csv',
@@ -123,7 +123,7 @@ matrix.shape
 # ## Save Unfiltered Matrix to file
 # %%
 uf.saveData(matrix, path, output_name + '_matrix_unfiltered',
-            ext='tsv', compression='gzip')
+            compression='gzip', dtype=np.float32)
 # %% [markdown]
 # # Filter Data
 # %% [markdown]
@@ -239,7 +239,7 @@ attribute_similarity_matrix.head()
 # %%
 uf.saveData(attribute_similarity_matrix, path,
             output_name + '_attribute_similarity_matrix', 
-            ext='tsv', compression='gzip')
+            compression='npz', symmetric=True, dtype=np.float32)
 # %%
 # net.load_df(attribute_similarity_matrix.iloc[:,:].copy())
 # net.filter_N_top('row', rank_type='sum', N_top=300)
