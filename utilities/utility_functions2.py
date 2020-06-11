@@ -271,6 +271,8 @@ def createGeneAttributeEdgeList(inputDF, attributelist, genelist, path, name):
         attributelist and genelist were generated from running
         createAttributeList and createGeneList on inputDF, respectively.
     '''
+
+    # Refactor by marking diagonal as Nan and using DF.stack
     temp = pd.DataFrame(columns=['GeneSym', 'GeneID', 'Attribute', 'Weight'])
 
     temp['GeneSym'] = pd.Series(
@@ -403,45 +405,33 @@ def loadData(filename):
 
 
 def createArchive(path):
-    with zipfile.ZipFile('output.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
+    with zipfile.ZipFile('output_archive.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, _, files in os.walk(path):
             for f in files:
                 zipf.write(os.path.join(root, f))
 
 
 def createBinaryMatrix(inputDF, ppi=False):
-
+    '''
+    Creates an adjacency matrix from inputDF, which is a gene-attribute edge
+    list.
+    '''
     if ppi:
-
+        # Left unfactored. Is this used?
         genes = list(set(inputDF.iloc[:, 0].unique(
         ).tolist()+inputDF.iloc[:, 1].unique().tolist()))
-
         matrix = pd.DataFrame(index=genes, columns=genes, data=0)
-
         for i, gene in enumerate(tqdm(genes)):
-
             lst = inputDF[inputDF.iloc[:, 0] == gene].iloc[:, 1].tolist()
             lst += inputDF[inputDF.iloc[:, 1] == gene].iloc[:, 0].tolist()
             lst = set(lst)
             lst.discard(gene)
             lst = list(lst)
-
             matrix.loc[gene, lst] = 1
-
         return(matrix)
-
     else:
-        genes = list(set(inputDF.iloc[:, 0].unique().tolist()))
-
-        attributes = list(set(inputDF.iloc[:, 1].unique().tolist()))
-
-        matrix = pd.DataFrame(index=genes, columns=attributes, data=0.0)
-
-        for i, gene in enumerate(tqdm(genes)):
-
-            lst = inputDF.loc[(inputDF.iloc[:, 0] == gene),
-                              inputDF.columns[1]].values.tolist()
-
-            matrix.at[gene, lst] = 1
-
-        return(matrix)
+        matrix = pd.crosstab(inputDF.iloc[:, 0], inputDF.iloc[:, 1])
+        matrix[matrix > 1] = 1
+        matrix.index.name = None
+        matrix.columns.name = None
+        return matrix

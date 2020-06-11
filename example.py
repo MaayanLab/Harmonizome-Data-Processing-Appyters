@@ -53,7 +53,7 @@ if not os.path.exists(path):
 {% do SectionField(
     name='data',
     title='Load Data',
-    subtitle='Upload files from the Developing Human Brain Sample (microarray) data set. Link: http://www.brainspan.org/static/download.html',
+    subtitle='Upload Files from the Developing Human Brain Sample (microarray) Data Set. Link: http://www.brainspan.org/static/download.html',
 ) %}
 # %% [markdown]
 # # Load Data

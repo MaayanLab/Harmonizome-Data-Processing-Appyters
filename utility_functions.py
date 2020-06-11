@@ -105,12 +105,12 @@ def mapgenesymbols(inputDF, symbol_lookup):
     from the DataFrame.
     '''
     tqdm.pandas()
-    outputDF = inputDF.reset_index()
+    inputDF = inputDF.reset_index()
 
-    outputDF.iloc[:, 0] = outputDF.iloc[:, 0].progress_map(
+    inputDF.iloc[:, 0] = inputDF.iloc[:, 0].progress_map(
         lambda x: symbol_lookup.get(x, np.nan))
 
-    outputDF = outputDF.dropna(subset=[outputDF.columns[0]])
+    outputDF = inputDF.dropna(subset=[inputDF.columns[0]])
     outputDF = outputDF.set_index(outputDF.columns[0])
     return outputDF
 
@@ -271,6 +271,8 @@ def createGeneAttributeEdgeList(inputDF, attributelist, genelist, path, name):
         attributelist and genelist were generated from running
         createAttributeList and createGeneList on inputDF, respectively.
     '''
+
+    # Refactor by marking diagonal as Nan and using DF.stack
     temp = pd.DataFrame(columns=['GeneSym', 'GeneID', 'Attribute', 'Weight'])
 
     temp['GeneSym'] = pd.Series(
@@ -368,19 +370,16 @@ def saveData(inputDF, path, name, compression=None, ext='tsv',
     elif compression == 'npz':
         name = getFileName(path, name, 'npz')
 
-        data = inputDF.to_numpy()
+        data = inputDF.to_numpy(dtype=dtype)
         index = np.array(inputDF.index)
         columns = np.array(inputDF.columns)
 
-        if dtype is not None:
-            data = data.astype(dtype=dtype)
         if symmetric:
             data = np.triu(data)
-            d = {'symmetric': data, 'index': index}
+            np.savez_compressed(name, symmetric=data, index=index)
         else:
-            d = {'nonsymmetric': data, 'index': index, 'columns': columns}
-        np.savez_compressed(name, **d)
-
+            np.savez_compressed(name, nonsymmetric=data, 
+                                index=index, columns=columns)
 
 def loadData(filename):
     '''
@@ -410,38 +409,26 @@ def createArchive(path):
 
 
 def createBinaryMatrix(inputDF, ppi=False):
-
+    '''
+    Creates an adjacency matrix from inputDF, which is a gene-attribute edge
+    list.
+    '''
     if ppi:
-
+        # Left unfactored. Is this used?
         genes = list(set(inputDF.iloc[:, 0].unique(
         ).tolist()+inputDF.iloc[:, 1].unique().tolist()))
-
         matrix = pd.DataFrame(index=genes, columns=genes, data=0)
-
         for i, gene in enumerate(tqdm(genes)):
-
             lst = inputDF[inputDF.iloc[:, 0] == gene].iloc[:, 1].tolist()
             lst += inputDF[inputDF.iloc[:, 1] == gene].iloc[:, 0].tolist()
             lst = set(lst)
             lst.discard(gene)
             lst = list(lst)
-
             matrix.loc[gene, lst] = 1
-
         return(matrix)
-
     else:
-        genes = list(set(inputDF.iloc[:, 0].unique().tolist()))
-
-        attributes = list(set(inputDF.iloc[:, 1].unique().tolist()))
-
-        matrix = pd.DataFrame(index=genes, columns=attributes, data=0.0)
-
-        for i, gene in enumerate(tqdm(genes)):
-
-            lst = inputDF.loc[(inputDF.iloc[:, 0] == gene),
-                              inputDF.columns[1]].values.tolist()
-
-            matrix.at[gene, lst] = 1
-
-        return(matrix)
+        matrix = pd.crosstab(inputDF.index, inputDF.iloc[:, 0])
+        matrix[matrix > 1] = 1
+        matrix.index.name = None
+        matrix.columns.name = None
+        return matrix
