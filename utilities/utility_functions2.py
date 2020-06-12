@@ -105,12 +105,12 @@ def mapgenesymbols(inputDF, symbol_lookup):
     from the DataFrame.
     '''
     tqdm.pandas()
-    outputDF = inputDF.reset_index()
+    inputDF = inputDF.reset_index()
 
-    outputDF.iloc[:, 0] = outputDF.iloc[:, 0].progress_map(
+    inputDF.iloc[:, 0] = inputDF.iloc[:, 0].progress_map(
         lambda x: symbol_lookup.get(x, np.nan))
 
-    outputDF = outputDF.dropna(subset=[outputDF.columns[0]])
+    outputDF = inputDF.dropna(subset=[inputDF.columns[0]])
     outputDF = outputDF.set_index(outputDF.columns[0])
     return outputDF
 
@@ -259,37 +259,29 @@ def createAttributeList(inputDF, metaData=None):
     return attribute_list
 
 
-def createGeneAttributeEdgeList(inputDF, attributelist, genelist, path, name):
+def createGeneAttributeEdgeList(df, attributelist, genelist, path, name):
     '''
     Creates the gene-attribute edge list from the given input DataFrame,
     attribute and gene lists. The year and month are added at the
     end of the name. The path the file is saved to is thus
         path + name + '_<year>_<month>.gmt'
-    Also prints the number of cells in inputDF that are statistically
+    Also prints the number of cells in df that are statistically
     significant, i.e. > 0.95 confidence.
     Requires:
         attributelist and genelist were generated from running
-        createAttributeList and createGeneList on inputDF, respectively.
+        createAttributeList and createGeneList on df, respectively.
     '''
 
-    # Refactor by marking diagonal as Nan and using DF.stack
-    temp = pd.DataFrame(columns=['GeneSym', 'GeneID', 'Attribute', 'Weight'])
+    count = np.sum(np.sum(df >= 0.95) + np.sum(df <= -0.95))
+    df = df.stack()
+    df.index.names = ['Gene', 'Attribute']
+    df.name = 'Weight'
+    df = df.astype('category')
+    #df['Weight'] = df['Weight'].astype('category')
 
-    temp['GeneSym'] = pd.Series(
-        [x for x in genelist['GeneSym'].values.tolist()
-            for _ in range(len(attributelist))], dtype='category')
-    temp['GeneID'] = pd.Series(
-        [x for x in genelist['GeneID'].values.tolist()
-            for _ in range(len(attributelist))], dtype='category')
-    temp['Attribute'] = pd.Series(
-        attributelist.index.values.tolist() * len(genelist),
-        dtype='category')
-    temp['Weight'] = pd.Series(inputDF.values.flatten(), dtype='category')
+    df.columns = ['Gene', 'Attribute', 'Weight']
+    ##saveData(df, path, name, ext='tsv', compression='gzip')
 
-    saveData(temp, path, name, ext='tsv', compression='gzip')
-
-    arr = inputDF.to_numpy()
-    count = np.sum(arr >= 0.95) + np.sum(arr <= -0.95)
     print('The number of statisticaly relevent gene-attribute associations is: %d' % count)
 
 
@@ -370,19 +362,16 @@ def saveData(inputDF, path, name, compression=None, ext='tsv',
     elif compression == 'npz':
         name = getFileName(path, name, 'npz')
 
-        data = inputDF.to_numpy()
+        data = inputDF.to_numpy(dtype=dtype)
         index = np.array(inputDF.index)
         columns = np.array(inputDF.columns)
 
-        if dtype is not None:
-            data = data.astype(dtype=dtype)
         if symmetric:
             data = np.triu(data)
-            d = {'symmetric': data, 'index': index}
+            np.savez_compressed(name, symmetric=data, index=index)
         else:
-            d = {'nonsymmetric': data, 'index': index, 'columns': columns}
-        np.savez_compressed(name, **d)
-
+            np.savez_compressed(name, nonsymmetric=data, 
+                                index=index, columns=columns)
 
 def loadData(filename):
     '''
@@ -430,7 +419,7 @@ def createBinaryMatrix(inputDF, ppi=False):
             matrix.loc[gene, lst] = 1
         return(matrix)
     else:
-        matrix = pd.crosstab(inputDF.iloc[:, 0], inputDF.iloc[:, 1])
+        matrix = pd.crosstab(inputDF.index, inputDF.iloc[:, 0])
         matrix[matrix > 1] = 1
         matrix.index.name = None
         matrix.columns.name = None
