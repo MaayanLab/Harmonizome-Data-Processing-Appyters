@@ -211,13 +211,13 @@ def createDownAttributeSetLib(inputDF, path, name):
     createSetLibHelper('attribute', inputDF, path, name, -1)
 
 
-def createSimilarityMatrix(inputDF, metric):
+def createSimilarityMatrix(inputDF, metric, dtype=None):
     '''
     Creates a similarity matrix between the rows of the inputDF based on
     the metric specified. The resulting matrix has both rows and columns labeled
     by the index of inputDF.
     '''
-    similarity_matrix = dist.pdist(inputDF, metric)
+    similarity_matrix = dist.pdist(inputDF.to_numpy(dtype=dtype), metric)
     similarity_matrix = dist.squareform(similarity_matrix)
     similarity_matrix = 1 - similarity_matrix
     similarity_df = pd.DataFrame(
@@ -259,37 +259,29 @@ def createAttributeList(inputDF, metaData=None):
     return attribute_list
 
 
-def createGeneAttributeEdgeList(inputDF, attributelist, genelist, path, name):
+def createGeneAttributeEdgeList(df, attributelist, genelist, path, name):
     '''
     Creates the gene-attribute edge list from the given input DataFrame,
     attribute and gene lists. The year and month are added at the
     end of the name. The path the file is saved to is thus
         path + name + '_<year>_<month>.gmt'
-    Also prints the number of cells in inputDF that are statistically
+    Also prints the number of cells in df that are statistically
     significant, i.e. > 0.95 confidence.
     Requires:
         attributelist and genelist were generated from running
-        createAttributeList and createGeneList on inputDF, respectively.
+        createAttributeList and createGeneList on df, respectively.
     '''
 
-    # Refactor by marking diagonal as Nan and using DF.stack
-    temp = pd.DataFrame(columns=['GeneSym', 'GeneID', 'Attribute', 'Weight'])
+    count = np.sum(np.sum(df >= 0.95) + np.sum(df <= -0.95))
+    df = df.stack()
+    df.index.names = ['Gene', 'Attribute']
+    df.name = 'Weight'
+    df = df.astype('category')
+    #df['Weight'] = df['Weight'].astype('category')
 
-    temp['GeneSym'] = pd.Series(
-        [x for x in genelist['GeneSym'].values.tolist()
-            for _ in range(len(attributelist))], dtype='category')
-    temp['GeneID'] = pd.Series(
-        [x for x in genelist['GeneID'].values.tolist()
-            for _ in range(len(attributelist))], dtype='category')
-    temp['Attribute'] = pd.Series(
-        attributelist.index.values.tolist() * len(genelist),
-        dtype='category')
-    temp['Weight'] = pd.Series(inputDF.values.flatten(), dtype='category')
+    # df.columns = ['Gene', 'Attribute', 'Weight']
+    saveData(df, path, name, ext='tsv', compression='gzip')
 
-    saveData(temp, path, name, ext='tsv', compression='gzip')
-
-    arr = inputDF.to_numpy()
-    count = np.sum(arr >= 0.95) + np.sum(arr <= -0.95)
     print('The number of statisticaly relevent gene-attribute associations is: %d' % count)
 
 
@@ -429,6 +421,7 @@ def createBinaryMatrix(inputDF, ppi=False):
     else:
         matrix = pd.crosstab(inputDF.index, inputDF.iloc[:, 0])
         matrix[matrix > 1] = 1
+        matrix = matrix.astype('boolean')
         matrix.index.name = None
         matrix.columns.name = None
         return matrix

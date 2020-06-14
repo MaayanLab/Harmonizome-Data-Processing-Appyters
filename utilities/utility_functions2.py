@@ -211,13 +211,13 @@ def createDownAttributeSetLib(inputDF, path, name):
     createSetLibHelper('attribute', inputDF, path, name, -1)
 
 
-def createSimilarityMatrix(inputDF, metric):
+def createSimilarityMatrix(inputDF, metric, dtype=None):
     '''
     Creates a similarity matrix between the rows of the inputDF based on
     the metric specified. The resulting matrix has both rows and columns labeled
     by the index of inputDF.
     '''
-    similarity_matrix = dist.pdist(inputDF, metric)
+    similarity_matrix = dist.pdist(inputDF.to_numpy(dtype=dtype), metric)
     similarity_matrix = dist.squareform(similarity_matrix)
     similarity_matrix = 1 - similarity_matrix
     similarity_df = pd.DataFrame(
@@ -421,6 +421,7 @@ def createBinaryMatrix(inputDF, ppi=False):
     else:
         matrix = pd.crosstab(inputDF.index, inputDF.iloc[:, 0])
         matrix[matrix > 1] = 1
+        matrix = matrix.astype('boolean')
         matrix.index.name = None
         matrix.columns.name = None
         return matrix
