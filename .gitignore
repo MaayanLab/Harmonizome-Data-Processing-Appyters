@@ -46,3 +46,6 @@ files/
 */data/
 Input/
 Output/
+
+# Excel temp file
+~$*
