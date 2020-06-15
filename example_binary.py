@@ -130,7 +130,7 @@ uf.createUpAttributeSetLib(binary_matrix, path,
 # %% [markdown]
 # ## Create Attribute Similarity Matrix
 # %%
-attribute_similarity_matrix = uf.createSimilarityMatrix(binary_matrix.T, 'jaccard')
+attribute_similarity_matrix = uf.createSimilarityMatrix(binary_matrix.T, 'jaccard', np.bool)
 attribute_similarity_matrix.head()
 # %%
 uf.saveData(attribute_similarity_matrix, path,
@@ -144,7 +144,7 @@ uf.saveData(attribute_similarity_matrix, path,
 # %% [markdown]
 # ## Create Gene Similarity Matrix
 # %%
-gene_similarity_matrix = uf.createSimilarityMatrix(binary_matrix, 'jaccard')
+gene_similarity_matrix = uf.createSimilarityMatrix(binary_matrix, 'jaccard', np.bool)
 gene_similarity_matrix.head()
 # %%
 uf.saveData(gene_similarity_matrix, path, 
