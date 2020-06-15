@@ -38,6 +38,21 @@ sys.version
 # %% [markdown]
 # # Initialization
 # %% [markdown]
+# ### Options
+# %%
+%%appyter code_eval
+
+{% set group = ChoiceField(
+    name='group',
+    label='Group',
+    choices={
+        'All': "'all'",
+        'No Disease': "'none'"
+    },
+    default='No Disease',
+    section='data'
+) %}
+# %% [markdown]
 # ### Load Mapping Dictionaries
 # %%
 symbol_lookup, geneid_lookup = lookup.get_lookups()
