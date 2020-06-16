@@ -7,6 +7,7 @@ import zipfile
 import numpy as np
 import pandas as pd
 import scipy.spatial.distance as dist
+import scipy.sparse as sp
 from statsmodels.distributions.empirical_distribution import ECDF
 
 from tqdm import tqdm
@@ -45,6 +46,7 @@ def quantileNormalize(inputDF):
     '''
     Performs quantile normalization on the input DataFrame.
     '''
+    # from ayhan on StackOverflow
     rank_mean = inputDF.stack().groupby(
         inputDF.rank(method='first').stack().astype(int)).mean()
     outputDF = inputDF.rank(method='min').stack().astype(int).map(
@@ -211,12 +213,25 @@ def createDownAttributeSetLib(inputDF, path, name):
     createSetLibHelper('attribute', inputDF, path, name, -1)
 
 
-def createSimilarityMatrix(inputDF, metric, dtype=None):
+def createSimilarityMatrix(inputDF, metric, dtype=None, sparse=False):
     '''
     Creates a similarity matrix between the rows of the inputDF based on
     the metric specified. The resulting matrix has both rows and columns labeled
     by the index of inputDF.
     '''
+    if sparse and metric == 'jaccard':
+        # from na-o-ys on Github
+        sparse = sp.csr_matrix(inputDF.to_numpy(dtype=np.bool).astype(np.int))
+        cols_sum = sparse.getnnz(axis=1)
+        ab = sparse * sparse.T
+        aa = np.repeat(cols_sum, ab.getnnz(axis=1)) # for rows
+        bb = cols_sum[ab.indices] # for columns
+        similarities = ab.copy()
+        similarities.data = similarities.data / (aa + bb - ab.data)
+        sim = similarities.todense()
+        np.fill_diagonal(sim, 1)
+        return similarities
+
     similarity_matrix = dist.pdist(inputDF.to_numpy(dtype=dtype), metric)
     similarity_matrix = dist.squareform(similarity_matrix)
     similarity_matrix = 1 - similarity_matrix
