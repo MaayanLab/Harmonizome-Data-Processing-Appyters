@@ -228,18 +228,19 @@ def createSimilarityMatrix(inputDF, metric, dtype=None, sparse=False):
         bb = cols_sum[ab.indices] # for columns
         similarities = ab.copy()
         similarities.data = similarities.data / (aa + bb - ab.data)
-        sim = similarities.todense()
-        np.fill_diagonal(sim, 1)
-        return similarities
+        similarity_matrix = similarities.todense()
+        np.fill_diagonal(similarity_matrix, 1)
 
-    similarity_matrix = dist.pdist(inputDF.to_numpy(dtype=dtype), metric)
-    similarity_matrix = dist.squareform(similarity_matrix)
-    similarity_matrix = 1 - similarity_matrix
+    else:
+        similarity_matrix = dist.pdist(inputDF.to_numpy(dtype=dtype), metric)
+        similarity_matrix = dist.squareform(similarity_matrix)
+        similarity_matrix = 1 - similarity_matrix
+
     similarity_df = pd.DataFrame(
         data=similarity_matrix, index=inputDF.index, columns=inputDF.index)
     similarity_df.index.name = None
     similarity_df.columns.name = None
-    return(similarity_df)
+    return similarity_df
 
 
 def createGeneList(inputDF, geneid_lookup):
