@@ -2,11 +2,12 @@
 # To add a new markdown cell, type '# %% [markdown]'
 
 # %% [markdown]
-# # Human Phenotype Ontology
+# # DSigDB
 # %% [markdown]
-# Author: Moshe Silverstein <br/>
-# Date: 11-17 <br/>
-# Data Source: http://www.human-phenotype-ontology.org/
+# Author: Moshe Silverstein   
+# Date: 05-07-2018  
+# Data Source Home: http://tanlab.ucdenver.edu/DSigDB/DSigDBv1.0/  
+# Data Source Download: http://tanlab.ucdenver.edu/DSigDB/DSigDBv1.0/download.html  
 #
 # Reviewer: Charles Dai <br>
 # Updated: 6-20
@@ -43,13 +44,15 @@ sys.version
 %%appyter code_eval
 
 {% set group = ChoiceField(
-    name='group',
-    label='Group',
+    name='drug subset',
+    label='Drug Subset',
     choices={
-        'All': "'all'",
-        'No Disease': "'none'"
+        'Computational Drug Signatures': "'Computational'",
+        'FDA Approved Drugs': "'FDA'",
+        'Kinase Inhibitors': "'Kinase'",
+        'Peturbagen Signatures': "'Peturbagen'"
     },
-    default='No Disease',
+    default='Computational Drug Signatures',
     section='data'
 ) %}
 # %% [markdown]
@@ -59,9 +62,11 @@ symbol_lookup, geneid_lookup = lookup.get_lookups()
 # %% [markdown]
 # ### Output Path
 # %%
-output_name = 'hpo'
+%%appyter code_exec
 
-path = 'Output/HPO'
+output_name = 'dsigdb_' + {{group}}.lower()
+
+path = 'Output/DSigDB-'  + {{group}}
 if not os.path.exists(path):
     os.makedirs(path)
 # %%
@@ -69,7 +74,7 @@ if not os.path.exists(path):
 {% do SectionField(
     name='data',
     title='Load Data',
-    subtitle='Upload Files from the Human Phenotype Ontology Data Set',
+    subtitle='Upload Files from the Drug Signatures Database',
 ) %}
 # %% [markdown]
 # # Load Data
@@ -78,11 +83,11 @@ if not os.path.exists(path):
 
 df = pd.read_csv({{FileField(
     constraint='.*\.txt$',
-    name='phenotype_gene_list', 
-    label='Phenotypes to Genes', 
-    default='Input/HPO/ALL_SOURCES_ALL_FREQUENCIES_phenotype_to_genes.txt',
+    name='dsigdb data', 
+    label='DSigDB Data', 
+    default='Input/DSigDB/DSigDB_All_detailed.txt',
     section='data')
-}}, skiprows=1, header=None)
+}}, sep='\t', usecols=['Drug', 'Gene', 'Source'])
 # %%
 df.head()
 # %%
@@ -92,9 +97,20 @@ df.shape
 # %% [markdown]
 # ## Get Relevant Data
 # %%
-df = df[[1,3]] 
-df = df.set_index(3)
+%%appyter code_exec
+
+sources = {
+    'Computational': ['BOSS', 'CTD', 'TTD', 'D4 PubChem', 'D4 ChEMBL'],
+    'FDA': ['D1'],
+    'Kinase': ['FDA', 'Kinome Scan', 'LINCS', 'MRC', 'GSK', 'Roche', 'RBC'],
+    'Peturbagen': ['CMAP']
+}[{{group}}]
 # %%
+df = df.dropna()
+df = df[df['Source'].str.contains('|'.join(sources))]
+df.head()
+# %%
+df = df.drop('Source', axis=1).set_index('Gene')
 df.head()
 # %% [markdown]
 # # Filter Data

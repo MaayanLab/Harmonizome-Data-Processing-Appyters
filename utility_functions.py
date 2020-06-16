@@ -221,7 +221,7 @@ def createSimilarityMatrix(inputDF, metric, dtype=None, sparse=False):
     '''
     if sparse and metric == 'jaccard':
         # from na-o-ys on Github
-        sparse = sp.csr_matrix(inputDF.to_numpy(dtype=np.bool).astype(np.int))
+        sparse = sp.csr_matrix(inputDF.to_numpy(sparse=True).astype(np.int))
         cols_sum = sparse.getnnz(axis=1)
         ab = sparse * sparse.T
         aa = np.repeat(cols_sum, ab.getnnz(axis=1)) # for rows
