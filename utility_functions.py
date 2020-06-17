@@ -17,7 +17,7 @@ def removeAndImpute(inputDF):
     '''
     Removes rows and columns that have more than 95% of their data missing,
     i.e. set to 0. Replacing any missing data leftover after removal with
-    the means of the rows. Does all calculations in place.
+    the means of the rows.
     '''
     outputDF = inputDF.replace(0.0, np.nan)
     outputDF = outputDF.dropna(thresh=0.05 * inputDF.shape[0], axis=1)
