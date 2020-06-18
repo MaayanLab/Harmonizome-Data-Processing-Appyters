@@ -2,11 +2,12 @@
 # To add a new markdown cell, type '# %% [markdown]'
 
 # %% [markdown]
-# # Human Phenotype Ontology
+# # Public Health Genomics Knowledge Base (PHGKB)
 # %% [markdown]
 # Author: Moshe Silverstein <br/>
 # Date: 11-17 <br/>
-# Data Source: http://www.human-phenotype-ontology.org/
+# Data Source: https://phgkb.cdc.gov/PHGKB/downloadCenter.action <br>
+# Genopedia
 #
 # Reviewer: Charles Dai <br>
 # Updated: 6-20
@@ -38,30 +39,15 @@ sys.version
 # %% [markdown]
 # # Initialization
 # %% [markdown]
-# ### Options
-# %%
-%%appyter code_eval
-
-{% set group = ChoiceField(
-    name='group',
-    label='Group',
-    choices={
-        'All': "'all'",
-        'No Disease': "'none'"
-    },
-    default='No Disease',
-    section='data'
-) %}
-# %% [markdown]
 # ### Load Mapping Dictionaries
 # %%
 symbol_lookup, geneid_lookup = lookup.get_lookups()
 # %% [markdown]
 # ### Output Path
 # %%
-output_name = 'hpo'
+output_name = 'phgkb'
 
-path = 'Output/HPO'
+path = 'Output/PHGKB'
 if not os.path.exists(path):
     os.makedirs(path)
 # %%
@@ -69,7 +55,10 @@ if not os.path.exists(path):
 {% do SectionField(
     name='data',
     title='Load Data',
-    subtitle='Upload Files from the Human Phenotype Ontology Data Set',
+    subtitle=(
+        'Upload Files from the Public Health Genomics and Precision health '
+        'Knowledge Base (PHGKB) Genopedia Database'
+    ),
 ) %}
 # %% [markdown]
 # # Load Data
@@ -78,11 +67,11 @@ if not os.path.exists(path):
 
 df = pd.read_csv({{FileField(
     constraint='.*\.txt$',
-    name='phenotype_gene_list', 
-    label='Phenotypes to Genes', 
-    default='Input/HPO/ALL_SOURCES_ALL_FREQUENCIES_phenotype_to_genes.txt',
+    name='genopedia', 
+    label='Genopedia (txt)', 
+    default='Input/PHGKB/GeneID-Disease.txt',
     section='data')
-}}, skiprows=1, header=None)
+}}, skiprows=4, sep='#', header=None)
 # %%
 df.head()
 # %%
@@ -92,9 +81,17 @@ df.shape
 # %% [markdown]
 # ## Get Relevant Data
 # %%
-df = df[[1,3]] 
-df = df.set_index(3)
+def splitter(s):
+    # split attributes from gene, remove parentheses
+    lst = list(map(lambda x: x[:x.find('(')], s.split('\t')))
+    return lst[0], lst[1:]
 # %%
+df = pd.DataFrame(df[0].map(splitter).tolist(), columns=['Gene', 'Attribute'])
+df.head()
+# %% [markdown]
+# ## Split Attribute Lists
+# %%
+df = df.explode('Attribute').dropna().set_index('Gene')
 df.head()
 # %% [markdown]
 # # Filter Data

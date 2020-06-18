@@ -20,8 +20,6 @@ import os
 
 import numpy as np
 import pandas as pd
-import itertools
-import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 %matplotlib inline
 
@@ -40,15 +38,30 @@ sys.version
 # %% [markdown]
 # # Initialization
 # %% [markdown]
+# ### Options
+# %%
+%%appyter code_eval
+
+{% set group = ChoiceField(
+    name='group',
+    label='Group',
+    choices={
+        'All': "'all'",
+        'No Disease': "'none'"
+    },
+    default='No Disease',
+    section='data'
+) %}
+# %% [markdown]
 # ### Load Mapping Dictionaries
 # %%
 symbol_lookup, geneid_lookup = lookup.get_lookups()
 # %% [markdown]
 # ### Output Path
 # %%
-output_name = 'hmdb'
+output_name = 'hpo'
 
-path = 'Output/HMDB'
+path = 'Output/HPO'
 if not os.path.exists(path):
     os.makedirs(path)
 # %%
@@ -56,46 +69,33 @@ if not os.path.exists(path):
 {% do SectionField(
     name='data',
     title='Load Data',
-    subtitle='Upload Files from the Human Metabolome Database',
+    subtitle='Upload Files from the Human Phenotype Ontology Data Set',
 ) %}
 # %% [markdown]
 # # Load Data
 # %%
 %%appyter code_exec
 
-tree = ET.parse({{FileField(
-    constraint='.*\.xml$',
-    name='all_metabolites', 
-    label='All Metabolites (XML)', 
-    default='Input/HMDB/hmdb_metabolites.xml',
+df = pd.read_csv({{FileField(
+    constraint='.*\.txt$',
+    name='phenotype_gene_list', 
+    label='Phenotypes to Genes', 
+    default='Input/HPO/ALL_SOURCES_ALL_FREQUENCIES_phenotype_to_genes.txt',
     section='data')
-}})
-root = tree.getroot()
+}}, skiprows=1, header=None)
 # %%
-for disorder in itertools.islice(root.iter('metabolite'), 10):
-    print(disorder.find('name').text)
 df.head()
+# %%
+df.shape
 # %% [markdown]
 # # Pre-process Data
 # %% [markdown]
 # ## Get Relevant Data
 # %%
-metabolites = []
-genes = []
-for metabolite in root.iter('metabolites'):
-    metabolites.append(metabolite.find('name').text)
-    genes.append([gene.find('gene_name').text for gene in metabolite.iter('protein_associations')])
+df = df[[1,3]] 
+df = df.set_index(3)
 # %%
-df = pd.DataFrame({'Genes': genes, 'Metabolites', metabolites})
 df.head()
-# %%[markdown]
-# ## Split Gene Lists
-# %%
-df = df.explode('Genes')
-df = df.set_index('Genes')
-df.head()
-# %%
-df.shape
 # %% [markdown]
 # # Filter Data
 # %% [markdown]
