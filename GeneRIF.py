@@ -2,12 +2,14 @@
 # To add a new markdown cell, type '# %% [markdown]'
 
 # %% [markdown]
-# # hu.MAP
+# # GeneRIF
 # %% [markdown]
 # Author: Moshe Silverstein <br/>
-# Date: 7-17 <br/>
-# Data Downloaded: 5-30-2017 <br/>
-# Data Source: http://hu.proteincomplexes.org/download
+# Date: 8-17 <br/>
+# Data Source: ftp://ftp.ncbi.nih.gov/gene/GeneRIF/
+#
+# Reviewer: Charles Dai <br>
+# Updated: 6-20
 # %%
 # appyter init
 from appyter import magic
@@ -36,15 +38,16 @@ sys.version
 # %% [markdown]
 # # Initialization
 # %% [markdown]
+# %% [markdown]
 # ### Load Mapping Dictionaries
 # %%
 symbol_lookup, geneid_lookup = lookup.get_lookups()
 # %% [markdown]
 # ### Output Path
 # %%
-output_name = 'humap'
+output_name = 'generif'
 
-path = 'Output/huMAP'
+path = 'Output/GeneRIF'
 if not os.path.exists(path):
     os.makedirs(path)
 # %%
@@ -52,7 +55,7 @@ if not os.path.exists(path):
 {% do SectionField(
     name='data',
     title='Load Data',
-    subtitle='Upload Files from the Human Protein Complex Map',
+    subtitle='Upload Files from the GeneRIF Data Set',
 ) %}
 # %% [markdown]
 # # Load Data
@@ -60,12 +63,12 @@ if not os.path.exists(path):
 %%appyter code_exec
 
 df = pd.read_csv({{FileField(
-    constraint='.*\.txt$',
-    name='network', 
-    label='Protein Interaction Network (txt)', 
-    default='Input/hu.MAP/genename_pairsWprob.txt',
+    constraint='.*\.gz$',
+    name='interactions', 
+    label='Interactions (gz)', 
+    default='Input/GeneRIF/interactions.gz',
     section='data')
-}}, sep='\t', header=None, names=['Protein A', 'Protein B', 'Probability'])
+}}, sep='\t', usecols=['#tax_id', 'gene_id', 'keyphrase'])
 # %%
 df.head()
 # %%
@@ -75,16 +78,27 @@ df.shape
 # %% [markdown]
 # ## Get Relevant Data
 # %%
-# Only Probabilities > 0.95
-df = df[df['Probability'] >= 0.95].drop('Probability', axis=1)
-df.shape
+# Only relevant species
+df = df[np.logical_or.reduce([
+    df['#tax_id'] == 9606, # human
+    df['#tax_id'] == 10090, # mouse
+    df['#tax_id'] == 10116 # rat
+])].drop('#tax_id', axis=1)
+# %%
+df = df[df['keyphrase'] != '-'].set_index('gene_id')
+df.head()
+# %% [markdown]
+# ## Map Gene ID to Symbol
+# %%
+id_to_symbol = {v: k for k, v in geneid_lookup.items()}
+df.index = df.index.map(id_to_symbol)
+df.head()
 # %% [markdown]
 # # Filter Data
 # %% [markdown]
 # ## Map Gene Symbols to Up-to-date Approved Gene Symbols
 # %%
-df = uf.mapgenesymbols(df.set_index('Protein B'), symbol_lookup).reset_index()
-df = uf.mapgenesymbols(df.set_index('Protein A'), symbol_lookup)
+df = uf.mapgenesymbols(df, symbol_lookup)
 df.shape
 # %% [markdown]
 # # Analyze Data

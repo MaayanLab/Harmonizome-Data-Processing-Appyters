@@ -13,19 +13,18 @@ from statsmodels.distributions.empirical_distribution import ECDF
 from tqdm import tqdm
 
 
-def removeAndImpute(inputDF):
+def removeAndImpute(df):
     '''
     Removes rows and columns that have more than 95% of their data missing,
     i.e. set to 0. Replacing any missing data leftover after removal with
     the means of the rows.
     '''
-    outputDF = inputDF.replace(0.0, np.nan)
-    outputDF = outputDF.dropna(thresh=0.05 * inputDF.shape[0], axis=1)
-    outputDF = outputDF.dropna(thresh=0.05 * inputDF.shape[1], axis=0)
-
-    outputDF = outputDF.T.fillna(
-        outputDF.mean(axis=1, numeric_only=True), axis=0).T
-    return outputDF
+    r, c = df.shape
+    df = df.replace(0.0, np.nan)
+    df = df.dropna(thresh=0.05 * r, axis=1)
+    df = df.dropna(thresh=0.05 * c, axis=0)
+    
+    return df.fillna(df.mean(axis=0))
 
 
 def merge(inputDF, axis, method):

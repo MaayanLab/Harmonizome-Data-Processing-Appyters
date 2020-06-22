@@ -2,12 +2,12 @@
 # To add a new markdown cell, type '# %% [markdown]'
 
 # %% [markdown]
-# # Drugbank-Drug Enzyme
+# # ClinVar
 # %% [markdown]
 # Author: Moshe Silverstein <br/>
-# Date: 03-2018 <br/>
-# Data Source Home: http://www.drugbank.ca/ <br/>
-# Data Source Download: https://www.drugbank.ca/releases/latest
+# Date: 8-17 <br/>
+# Data Downloaded: 08-2017 <br/>
+# Data Source: https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/
 #
 # Reviewer: Charles Dai <br>
 # Updated: 6-20
@@ -39,29 +39,15 @@ sys.version
 # %% [markdown]
 # # Initialization
 # %% [markdown]
-# ### Options
-# %%
-%%appyter code_eval
-
-{% set group = ChoiceField(
-    name='identifier',
-    label='Protein Identifier Group',
-    choices=['Target', 'Enzyme', 'Carrier', 'Transporter'],
-    default='Target',
-    section='data'
-) %}
-# %% [markdown]
 # ### Load Mapping Dictionaries
 # %%
 symbol_lookup, geneid_lookup = lookup.get_lookups()
 # %% [markdown]
 # ### Output Path
 # %%
-%%appyter code_exec
+output_name = 'clinvar'
 
-output_name = 'drugbank_' + '{{group}}'.lower()
-
-path = 'Output/DrugBank-' + '{{group}}'
+path = 'Output/ClinVar'
 if not os.path.exists(path):
     os.makedirs(path)
 # %%
@@ -69,7 +55,7 @@ if not os.path.exists(path):
 {% do SectionField(
     name='data',
     title='Load Data',
-    subtitle='Upload Files from the DrugBank Protein Identifiers Data Sets',
+    subtitle='Upload Files from the ClinVar Database',
 ) %}
 # %% [markdown]
 # # Load Data
@@ -77,56 +63,42 @@ if not os.path.exists(path):
 %%appyter code_exec
 
 df = pd.read_csv({{FileField(
-    constraint='.*\.csv$',
-    name='drug_identifiers', 
-    label='Drug Identifiers Data Set', 
-    default='Input/DrugBank/drugbank_all_target_polypeptide_ids.csv',
+    constraint='.*\.gz$',
+    name='variant_summary', 
+    label='Variant Summary (txt.gz)', 
+    default='Input/ClinVar/variant_summary.txt.gz',
     section='data')
-}}, usecols=['Gene Name', 'Drug IDs', 'Species'], index_col=0)
+}}, sep='\t', usecols=
+    ['ReviewStatus', 'ClinSigSimple', 'GeneSymbol', 'PhenotypeList'])
 # %%
 df.head()
 # %%
 df.shape
-# %% [markdown]
-# # Load Drug Metadata
-# %%
-%%appyter code_exec
-
-drug_meta = pd.read_csv({{FileField(
-    constraint='.*\.csv$',
-    name='drug_metadata', 
-    label='External Drug Links', 
-    default='Input/DrugBank/drugbank_all_drug_links.csv',
-    section='data')
-}}, usecols=['DrugBank ID', 'Name'], index_col=0)
-# %%
-drug_meta.head()
-# %%
-drug_meta.shape
 # %% [markdown]
 # # Pre-process Data
 # %% [markdown]
 # ## Get Relevant Data
 # %%
-# Get Relevant Species
-df = df[np.logical_or.reduce([
-    df['Species'] == 'Humans',
-    df['Species'] == 'Mouse',
-    df['Species'] == 'Rat'
-])].drop('Species', axis=1)
-df.head()
-# %% [markdown]
-# ## Split Drug ID list
+# Get only relevant review status
+df = df[np.logical_or(
+    df['ReviewStatus'] == 'reviewed by expert panel',
+    df['ReviewStatus'] == 'criteria provodied, multiple submitters, no conflicts'
+)]
+df.shape
 # %%
-df['Drug IDs'] = df['Drug IDs'].map(lambda x: x.split('; '))
-df = df.explode('Drug IDs').dropna()
+# Drop anything with clinical significance benign (ClinSigSimple = 0)
+df = df[df['ClinSigSimple'] != 0]
+df.shape
+# %%
+df = df[['GeneSymbol', 'PhenotypeList']]
 df.head()
 # %%
 df.shape
-# %%[markdown]
-# ## Map Drug IDs to Names
+# %% [markdown]
+# ## Split Attribute List
 # %%
-df['Drug IDs'] = drug_meta.reindex(df['Drug IDs']).set_index(df.index)
+df['PhenotypeList'] = df['PhenotypeList'].map(lambda s: s.split(';'))
+df = df.explode('PhenotypeList').set_index('GeneSymbol')
 df.head()
 # %% [markdown]
 # # Filter Data
