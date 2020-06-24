@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import harmonizome-helper.utility_functions as uf
+import harmonizome.utility_functions as uf
 import utility_functions2 as uf2
 '''
 # df = pd.DataFrame({'gene': ['A1BG', np.nan, 'P1', 'YYYY'], 'id': [1, 2, 3, 5],
