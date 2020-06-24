@@ -23,8 +23,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 %matplotlib inline
 
-import utility_functions as uf
-import lookup
+import harmonizome.utility_functions as uf
+import harmonizome.lookup as lookup
 # %%
 # from clustergrammer_widget import *
 # net = Network(clustergrammer_widget)
