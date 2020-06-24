@@ -1,11 +1,11 @@
 # To add a new cell, type '# %%'
 # To add a new markdown cell, type '# %% [markdown]'
 # %% [markdown]
-# # GTEx Tissue
+# # Comparative Toxicogenomics Database (CTD): Gene-Disease Interactions
 # %% [markdown]
 # Author: Moshe Silverstein <br/>
-# Date: 12-2017 <br/>
-# Data Source: https://www.gtexportal.org/home/datasets
+# Date: 8-17 <br/>
+# Data Source: http://ctdbase.org/downloads
 #
 # Reviewer: Charles Dai <br>
 # Updated: 6-20
@@ -16,7 +16,6 @@ magic.init(lambda _=globals: _())
 # %%
 import sys
 import os
-import gzip
 
 import numpy as np
 import pandas as pd
@@ -44,9 +43,9 @@ symbol_lookup, geneid_lookup = lookup.get_lookups()
 # %% [markdown]
 # ### Output Path
 # %%
-output_name = 'gtex'
+output_name = 'ctd_disease'
 
-path = 'Output/GTEx'
+path = 'Output/CTD-Disease'
 if not os.path.exists(path):
     os.makedirs(path)
 # %%
@@ -54,67 +53,36 @@ if not os.path.exists(path):
 {% do SectionField(
     name='data',
     title='Load Data',
-    subtitle='Upload Files from the GTEx Portal',
+    subtitle='Upload Files from the Comparative Toxicogenomics Database',
 ) %}
 # %% [markdown]
 # # Load Data
 # %%
 %%appyter code_exec
 
-matrix_zip = {{FileField(
-    constraint='.*\.gz$',
-    name='expression_matrix', 
-    label='RNA-Seq Gene TPMs (gz)', 
-    default='Input/GTEx/GTEx_Analysis_2017-06-05_v8_RNASeQCv1.1.9_gene_tpm.gct.gz',
+matrix = pd.read_csv({{FileField(
+    constraint='.*\.tsv.gz$',
+    name='disease_genes', 
+    label='Gene-Disease Interactions (tsv.gz)', 
+    default='Input/CTD/CTD_genes_diseases.tsv.gz',
     section='data')
-}}
-with gzip.open(matrix_zip, 'r') as matrix_file:
-    matrix = pd.read_csv(matrix_file, sep='\t', skiprows=2)
+}}, sep='\t', skiprows=[x for x in range(27)] + [28],
+    usecols=['# GeneSymbol', 'DiseaseName', 'InferenceScore'])
 # %%
 matrix.head()
 # %%
 matrix.shape
 # %% [markdown]
-# ## Load Sample Metadata
-# %%
-%%appyter code_exec
-
-sample_meta = pd.read_csv({{FileField(
-    constraint='.*\.txt$',
-    name='sample_metadata', 
-    label='Sample Metadata', 
-    default='Input/GTEx/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt',
-    section='data')
-}}, sep='\t', index_col=0, usecols='SMTSD')
-# %%
-sample_meta.head()
-# %%
-sample_meta.shape
-'''
-# %% [markdown]
-# ## Load Subject Metadata
-# %%
-%%appyter code_exec
-
-subject_meta = pd.read_csv({{FileField(
-    constraint='.*\.txt$',
-    name='subject_metadata', 
-    label='Subject Metadata', 
-    default='Input/GTEx/GTEx_Analysis_v8_Annotations_SubjectPhenotypesDS.txt',
-    section='data')
-}})
-# %%
-subject_meta.head()
-# %%
-subject_meta.shape
-'''
-# %% [markdown]
 # # Pre-process Data
 # %% [markdown]
-# ## Map Sample ID to Attribute
+# ## Create Matrix of Inference Scores
 # %%
-matrix.columns = sample_meta.reindex(matrix.columns).reset_index(drop=True)
+# Remove duplicates by averaging first
+matrix = matrix.set_index(['# GeneSymbol', 'DiseaseName'])
+matrix = matrix.groupby(level=[0,1]).mean().unstack()
 matrix.head()
+# %%
+matrix.shape
 # %% [markdown]
 # ## Save Unfiltered Matrix to file
 # %%
@@ -123,9 +91,10 @@ uf.saveData(matrix, path, output_name + '_matrix_unfiltered',
 # %% [markdown]
 # # Filter Data
 # %% [markdown]
-# ## Remove Data that is More Than 95% Missing and Impute Missing Data
+# ## Remove Genes that are More Than 95% Missing or Zero Inference
 # %%
-matrix = uf.removeAndImpute(matrix)
+matrix = matrix.replace(0, np.nan).dropna(
+    thresh=0.05 * matrix.shape[1], axis=0).replace(np.nan, 0)
 matrix.head()
 # %%
 matrix.shape
@@ -140,11 +109,6 @@ matrix.shape
 matrix = uf.merge(matrix, 'row', 'mean')
 matrix = uf.merge(matrix, 'column', 'mean')
 matrix.shape
-# %% [markdown]
-# ## Log2 Transform
-# %%
-matrix = uf.log2(matrix)
-matrix.head()
 # %% [markdown]
 # ## Normalize Matrix (Quantile Normalize the Matrix by Column)
 # %%

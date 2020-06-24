@@ -98,22 +98,22 @@ def log2(inputDF):
     return outputDF
 
 
-def mapgenesymbols(inputDF, symbol_lookup):
+def mapgenesymbols(df, symbol_lookup):
     '''
-    Replaces the index of the inputDF, which are gene names, with
+    Replaces the index of the df, which are gene names, with
     corresponding approved gene symbols according to the given symbol_lookup 
     dictionary. If any gene names are not in the mapping, they are discarded 
     from the DataFrame.
     '''
     tqdm.pandas()
-    inputDF = inputDF.reset_index()
+    df = df.reset_index()
 
-    inputDF.iloc[:, 0] = inputDF.iloc[:, 0].progress_map(
+    df.iloc[:, 0] = df.iloc[:, 0].progress_map(
         lambda x: symbol_lookup.get(x, np.nan))
 
-    outputDF = inputDF.dropna(subset=[inputDF.columns[0]])
-    outputDF = outputDF.set_index(outputDF.columns[0])
-    return outputDF
+    df = df.dropna(subset=[df.columns[0]]).drop_duplicates()
+    df = df.set_index(df.columns[0])
+    return df
 
 
 def createTernaryMatrix(inputDF):

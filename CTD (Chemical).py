@@ -2,11 +2,11 @@
 # To add a new markdown cell, type '# %% [markdown]'
 
 # %% [markdown]
-# # GeneRIF
+# # Comparative Toxicogenomics Database (CTD): Gene-Chemical Interactions
 # %% [markdown]
 # Author: Moshe Silverstein <br/>
 # Date: 8-17 <br/>
-# Data Source: ftp://ftp.ncbi.nih.gov/gene/GeneRIF/
+# Data Source: http://ctdbase.org/downloads
 #
 # Reviewer: Charles Dai <br>
 # Updated: 6-20
@@ -45,9 +45,9 @@ symbol_lookup, geneid_lookup = lookup.get_lookups()
 # %% [markdown]
 # ### Output Path
 # %%
-output_name = 'generif'
+output_name = 'ctd_chemical'
 
-path = 'Output/GeneRIF'
+path = 'Output/CTD-Chemical'
 if not os.path.exists(path):
     os.makedirs(path)
 # %%
@@ -55,7 +55,7 @@ if not os.path.exists(path):
 {% do SectionField(
     name='data',
     title='Load Data',
-    subtitle='Upload Files from the GeneRIF Data Set',
+    subtitle='Upload Files from the Comparative Toxicogenomics Database',
 ) %}
 # %% [markdown]
 # # Load Data
@@ -63,12 +63,13 @@ if not os.path.exists(path):
 %%appyter code_exec
 
 df = pd.read_csv({{FileField(
-    constraint='.*\.gz$',
-    name='interactions', 
-    label='Interactions (gz)', 
-    default='Input/GeneRIF/interactions.gz',
+    constraint='.*\.tsv.gz$',
+    name='chemical_genes', 
+    label='Chemical-Gene Interactions (tsv.gz)', 
+    default='Input/CTD/CTD_chem_gene_ixns.tsv.gz',
     section='data')
-}}, sep='\t', usecols=['#tax_id', 'gene_id', 'keyphrase'])
+}}, sep='\t', skiprows=[x for x in range(27)] + [28], 
+    usecols=['# ChemicalName', 'GeneSymbol', 'OrganismID', 'GeneForms'])
 # %%
 df.head()
 # %%
@@ -78,20 +79,21 @@ df.shape
 # %% [markdown]
 # ## Get Relevant Data
 # %%
-# Only relevant species
+# Get only relevant species
 df = df[np.logical_or.reduce([
-    df['#tax_id'] == 9606, # human
-    df['#tax_id'] == 10090, # mouse
-    df['#tax_id'] == 10116 # rat
-])].drop('#tax_id', axis=1)
+    df['OrganismID'] == 9606, # human
+    df['OrganismID'] == 10090, # mouse
+    df['OrganismID'] == 10116 # rat
+])]
 # %%
-df = df[df['keyphrase'] != '-'].set_index('gene_id')
+# Get only interactions that are gene or protein type
+df = df[np.logical_or(
+    df['GeneForms'] == 'protein',
+    df['GeneForms'] == 'gene'
+)]
 df.head()
-# %% [markdown]
-# ## Map Gene ID to Symbol
 # %%
-id_to_symbol = {v: k for k, v in geneid_lookup.items()}
-df.index = df.index.map(id_to_symbol)
+df = df[['GeneSymbol', '# ChemicalName']].set_index('GeneSymbol')
 df.head()
 # %% [markdown]
 # # Filter Data
